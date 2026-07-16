@@ -408,7 +408,7 @@
 //   );
 // }
 import React, { useEffect, useState } from "react";
-import { api, asArray, STAGE_META, SOURCE_LABEL, inr, relTime } from "@/lib/api";
+import { api, asArray, formatApiError, STAGE_META, SOURCE_LABEL, inr, relTime } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { DASH } from "@/constants/testIds";
 import { Link, useNavigate } from "react-router-dom";
@@ -449,10 +449,17 @@ function Kpi({ label, value, sub, icon: Icon, tone, testId, onClick }) {
 
 function RevenueBreakdownDialog({ open, onClose }) {
   const [data, setData] = useState(null);
+  const [error, setError] = useState("");
   useEffect(() => {
     if (!open) return;
     setData(null);
-    api.get("/dashboard/revenue-breakdown").then((r) => setData(r.data));
+    setError("");
+    api.get("/dashboard/revenue-breakdown")
+      .then((r) => setData({
+        period: { start: new Date().toISOString(), end: new Date().toISOString() },
+        ...(r.data || {}),
+      }))
+      .catch((e) => setError(formatApiError(e.response?.data?.detail) || e.message));
   }, [open]);
   if (data) {
     data.by_agent = asArray(data.by_agent);
@@ -464,7 +471,9 @@ function RevenueBreakdownDialog({ open, onClose }) {
         <DialogHeader>
           <DialogTitle className="font-display text-2xl">Revenue breakdown · this month</DialogTitle>
         </DialogHeader>
-        {!data ? (
+        {error ? (
+          <div className="text-sm text-clay py-8 text-center">{error}</div>
+        ) : !data ? (
           <div className="text-sm text-forest/50 py-8 text-center">Loading…</div>
         ) : (
           <>
@@ -532,9 +541,16 @@ function MonthlyTab() {
   const { user } = useAuth();
   const nav = useNavigate();
   const [data, setData] = useState(null);
+  const [error, setError] = useState("");
   const [revOpen, setRevOpen] = useState(false);
-  useEffect(() => { api.get("/dashboard/monthly").then((r) => setData(r.data)); }, []);
+  useEffect(() => {
+    setError("");
+    api.get("/dashboard/monthly")
+      .then((r) => setData(r.data || {}))
+      .catch((e) => setError(formatApiError(e.response?.data?.detail) || e.message));
+  }, []);
   
+  if (error) return <div className="text-clay text-sm">Dashboard failed to load: {error}</div>;
   // ADDED: !data.period check to prevent crashes on undefined data
   if (!data || !data.period) return <div className="text-forest/50 text-sm">Loading…</div>;
   data.kpi = data.kpi || {};
@@ -701,8 +717,15 @@ function ActionItemsTab() {
   const nav = useNavigate();
   const { user } = useAuth();
   const [data, setData] = useState(null);
-  useEffect(() => { api.get("/dashboard/action-items").then((r) => setData(r.data)); }, []);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    setError("");
+    api.get("/dashboard/action-items")
+      .then((r) => setData({ widgets: {}, ...(r.data || {}) }))
+      .catch((e) => setError(formatApiError(e.response?.data?.detail) || e.message));
+  }, []);
   
+  if (error) return <div className="text-clay text-sm">Action items failed to load: {error}</div>;
   // ADDED: !data.widgets check to prevent crashes on undefined data
   if (!data || !data.widgets) return <div className="text-forest/50 text-sm">Loading…</div>;
   data.todays_followups = asArray(data.todays_followups);
