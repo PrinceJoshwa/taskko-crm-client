@@ -115,18 +115,21 @@ function RevenueBreakdownDialog({ open, onClose }) {
   );
 }
 
-function MonthlyTab() {
-  const { user } = useAuth();
+function ActionItemsTab() {
   const nav = useNavigate();
+  const { user } = useAuth();
   const [data, setData] = useState(null);
-  const [revOpen, setRevOpen] = useState(false);
   
-  useEffect(() => { api.get("/dashboard/monthly").then((r) => setData(r.data)); }, []);
+  useEffect(() => { 
+    api.get("/dashboard/action-items").then((r) => setData(r.data)); 
+  }, []);
   
-  // Update your safety check to include data.period
-  if (!data || !data.period) return <div className="text-forest/50 text-sm">Loading…</div>;
+  // Update this safety check to also look for data.widgets
+  if (!data || !data.widgets) return <div className="text-forest/50 text-sm">Loading…</div>;
 
-  const period = `${new Date(data.period.start).toLocaleDateString("en-IN", { month: "short", day: "numeric" })} – ${new Date(new Date(data.period.end).getTime() - 86400000).toLocaleDateString("en-IN", { month: "short", day: "numeric" })}`;
+  const w = data.widgets;
+  const today = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" });
+
 
   return (
     <div className="space-y-6">
