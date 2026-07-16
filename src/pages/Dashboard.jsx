@@ -120,8 +120,11 @@ function MonthlyTab() {
   const nav = useNavigate();
   const [data, setData] = useState(null);
   const [revOpen, setRevOpen] = useState(false);
+  
   useEffect(() => { api.get("/dashboard/monthly").then((r) => setData(r.data)); }, []);
-  if (!data) return <div className="text-forest/50 text-sm">Loading…</div>;
+  
+  // Update your safety check to include data.period
+  if (!data || !data.period) return <div className="text-forest/50 text-sm">Loading…</div>;
 
   const period = `${new Date(data.period.start).toLocaleDateString("en-IN", { month: "short", day: "numeric" })} – ${new Date(new Date(data.period.end).getTime() - 86400000).toLocaleDateString("en-IN", { month: "short", day: "numeric" })}`;
 

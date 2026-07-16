@@ -15,9 +15,14 @@ export function ProjectProvider({ children }) {
     setLoading(true);
     try {
       const { data } = await api.get("/projects");
-      setProjects(data);
-      if (!data.find((p) => p.id === activeId)) {
-        const first = data[0]?.id || "";
+      
+      // Fallback to an empty array if data isn't one
+      const safeData = Array.isArray(data) ? data : []; 
+      setProjects(safeData);
+      
+      // Use the safeData variable for the find method
+      if (!safeData.find((p) => p.id === activeId)) {
+        const first = safeData[0]?.id || "";
         setActiveId(first);
         localStorage.setItem("tasko.activeProject", first);
       }
