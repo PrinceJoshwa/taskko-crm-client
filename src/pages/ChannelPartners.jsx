@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { api, formatApiError } from "@/lib/api";
+import { api, asArray, formatApiError } from "@/lib/api";
 import { CONSOLE } from "@/constants/testIds";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Plus, Trash2, Phone, Mail, MapPin } from "lucide-react";
@@ -12,7 +12,7 @@ export default function ChannelPartners() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(EMPTY);
 
-  const load = async () => setItems((await api.get("/channel-partners")).data);
+  const load = async () => setItems(asArray((await api.get("/channel-partners")).data));
   useEffect(() => { load(); }, []);
 
   const submit = async () => {

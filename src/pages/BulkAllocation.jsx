@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { api, formatApiError, SOURCE_LABEL, STAGE_META, relTime } from "@/lib/api";
+import { api, asArray, formatApiError, SOURCE_LABEL, STAGE_META, relTime } from "@/lib/api";
 import { CONSOLE, LEADS } from "@/constants/testIds";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -18,7 +18,7 @@ export default function BulkAllocation() {
 
   const load = async () => {
     const [l, u] = await Promise.all([api.get("/leads"), api.get("/users")]);
-    setLeads(l.data); setUsers(u.data);
+    setLeads(asArray(l.data)); setUsers(asArray(u.data));
   };
   useEffect(() => { load(); }, []);
 

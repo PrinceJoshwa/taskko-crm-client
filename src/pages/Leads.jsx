@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { api, formatApiError, STAGE_META, SOURCE_LABEL, inr, relTime } from "@/lib/api";
+import { api, asArray, formatApiError, STAGE_META, SOURCE_LABEL, inr, relTime } from "@/lib/api";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { LEADS } from "@/constants/testIds";
@@ -306,15 +306,15 @@ export default function Leads() {
         api.get("/users"),
         api.get("/projects"),
       ]);
-      let filtered = leadsR.data;
+      let filtered = asArray(leadsR.data);
       if (createdFilter === "this_month") {
         const now = new Date();
         const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
         filtered = filtered.filter((l) => l.created_at >= start);
       }
       setLeads(filtered);
-      setUsers(usersR.data);
-      setProjects(projR.data);
+      setUsers(asArray(usersR.data));
+      setProjects(asArray(projR.data));
     } finally {
       setLoading(false);
     }

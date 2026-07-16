@@ -20,6 +20,14 @@ export function formatApiError(detail) {
   return String(detail);
 }
 
+export function asArray(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.results)) return data.results;
+  return [];
+}
+
 export function inr(n) {
   if (n == null || Number.isNaN(Number(n))) return "—";
   const v = Number(n);

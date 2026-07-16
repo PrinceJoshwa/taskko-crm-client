@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { api, SOURCE_LABEL } from "@/lib/api";
+import { api, asArray, SOURCE_LABEL } from "@/lib/api";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 export default function Reports() {
   const [execs, setExecs] = useState([]);
   const [sources, setSources] = useState([]);
   useEffect(() => {
-    api.get("/reports/executives").then((r) => setExecs(r.data));
-    api.get("/reports/sources").then((r) => setSources(r.data));
+    api.get("/reports/executives").then((r) => setExecs(asArray(r.data)));
+    api.get("/reports/sources").then((r) => setSources(asArray(r.data)));
   }, []);
 
   return (

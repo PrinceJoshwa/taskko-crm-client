@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { api, inr, formatApiError } from "@/lib/api";
+import { api, asArray, inr, formatApiError } from "@/lib/api";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { INVENTORY } from "@/constants/testIds";
@@ -184,7 +184,7 @@ export default function Inventory() {
   const load = async () => {
     if (!projectFilter) { setUnits([]); return; }
     const { data } = await api.get("/units", { params: { project_id: projectFilter } });
-    setUnits(data);
+    setUnits(asArray(data));
   };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [projectFilter]);
 

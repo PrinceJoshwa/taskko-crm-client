@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { api, formatApiError } from "@/lib/api";
+import { api, asArray, formatApiError } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { TEAM } from "@/constants/testIds";
 import {
@@ -63,7 +63,7 @@ export default function Team() {
 
   const load = async () => {
     const { data } = await api.get("/users");
-    setUsers(data);
+    setUsers(asArray(data));
   };
   useEffect(() => { load(); }, []);
 

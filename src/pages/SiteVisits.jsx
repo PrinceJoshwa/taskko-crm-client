@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { api, relTime } from "@/lib/api";
+import { api, asArray, relTime } from "@/lib/api";
 import { useProjects } from "@/contexts/ProjectContext";
 import { Link } from "react-router-dom";
 import { VISIT } from "@/constants/testIds";
@@ -29,9 +29,9 @@ export default function SiteVisits() {
       api.get("/leads", { params }),
       api.get("/users"),
     ]);
-    setVisits(v.data);
-    setLeads(l.data);
-    setUsers(u.data);
+    setVisits(asArray(v.data));
+    setLeads(asArray(l.data));
+    setUsers(asArray(u.data));
   };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [activeId]);
 

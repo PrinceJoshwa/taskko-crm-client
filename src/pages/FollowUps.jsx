@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { api, relTime } from "@/lib/api";
+import { api, asArray, relTime } from "@/lib/api";
 import { Link } from "react-router-dom";
 import { FOLLOWUP } from "@/constants/testIds";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -18,8 +18,8 @@ export default function FollowUps() {
       api.get("/follow-ups", { params: status ? { status } : {} }),
       api.get("/leads"),
     ]);
-    setItems(fu.data);
-    setLeads(l.data);
+    setItems(asArray(fu.data));
+    setLeads(asArray(l.data));
   };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [status]);
 

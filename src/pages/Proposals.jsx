@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { api, formatApiError, inr, relTime } from "@/lib/api";
+import { api, asArray, formatApiError, inr, relTime } from "@/lib/api";
 import { CONSOLE } from "@/constants/testIds";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -24,7 +24,7 @@ export default function Proposals() {
 
   const load = async () => {
     const [p, l, pr] = await Promise.all([api.get("/proposals"), api.get("/leads"), api.get("/projects")]);
-    setItems(p.data); setLeads(l.data); setProjects(pr.data);
+    setItems(asArray(p.data)); setLeads(asArray(l.data)); setProjects(asArray(pr.data));
   };
   useEffect(() => { load(); }, []);
 

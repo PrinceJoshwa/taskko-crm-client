@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { api } from "@/lib/api";
+import { api, asArray } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 
 const ProjectCtx = createContext(null);
@@ -16,8 +16,7 @@ export function ProjectProvider({ children }) {
     try {
       const { data } = await api.get("/projects");
       
-      // Fallback to an empty array if data isn't one
-      const safeData = Array.isArray(data) ? data : []; 
+      const safeData = asArray(data);
       setProjects(safeData);
       
       // Use the safeData variable for the find method

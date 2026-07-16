@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { api, formatApiError } from "@/lib/api";
+import { api, asArray, formatApiError } from "@/lib/api";
 import { CONSOLE } from "@/constants/testIds";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -14,7 +14,7 @@ export default function WhatsAppTemplates() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(EMPTY);
 
-  const load = async () => setItems((await api.get("/whatsapp-templates")).data);
+  const load = async () => setItems(asArray((await api.get("/whatsapp-templates")).data));
   useEffect(() => { load(); }, []);
 
   const submit = async () => {
@@ -99,9 +99,9 @@ export default function WhatsAppTemplates() {
                     : <span className="text-[10px] uppercase tracking-[0.15em] font-bold text-clay">Draft</span>}
                 </div>
                 <div className="mt-3 text-sm text-forest/80 bg-bone-alt/50 border border-[#E6E4DD] rounded-sm p-3 whitespace-pre-wrap">{t.body}</div>
-                {(t.variables || []).length > 0 && (
+                {asArray(t.variables).length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-1.5">
-                    {t.variables.map((v) => <span key={v} className="text-[10px] font-mono text-forest/70 border border-[#E6E4DD] rounded-sm px-1.5 py-0.5">{`{{${v}}}`}</span>)}
+                    {asArray(t.variables).map((v) => <span key={v} className="text-[10px] font-mono text-forest/70 border border-[#E6E4DD] rounded-sm px-1.5 py-0.5">{`{{${v}}}`}</span>)}
                   </div>
                 )}
               </div>

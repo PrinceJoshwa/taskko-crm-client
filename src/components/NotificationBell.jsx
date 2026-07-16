@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { api, relTime } from "@/lib/api";
+import { api, asArray, relTime } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { NAV } from "@/constants/testIds";
 import {
@@ -43,7 +43,7 @@ export default function NotificationBell() {
   const load = useCallback(async () => {
     try {
       const { data } = await api.get("/notifications");
-      setItems(data.items || []);
+      setItems(asArray(data?.items ?? data));
       setUnread(data.unread || 0);
     } catch {
       /* silent */

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { api } from "@/lib/api";
+import { api, asArray } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { DASH } from "@/constants/testIds";
@@ -38,9 +38,9 @@ function SummaryBody({ data, compact }) {
   if (!data) {
     return <div className="text-sm text-forest/50 py-6 text-center">Preparing your report…</div>;
   }
-  const c = data.calls;
-  const m = data.milestones;
-  const f = data.followups;
+  const c = data.calls || {};
+  const m = data.milestones || {};
+  const f = data.followups || {};
 
   return (
     <>
@@ -74,13 +74,13 @@ function SummaryBody({ data, compact }) {
         </div>
       </div>
 
-      {data.top_execs && data.top_execs.length > 0 && (
+      {asArray(data.top_execs).length > 0 && (
         <div className="mt-3 border border-[#E6E4DD] bg-white rounded-sm">
           <div className="px-4 py-2 border-b border-[#E6E4DD] bg-bone-alt/40 label-caps">
             Top executives · today
           </div>
           <div className="divide-y divide-[#E6E4DD]">
-            {data.top_execs.map((t, i) => (
+            {asArray(data.top_execs).map((t, i) => (
               <div key={i} className="flex items-center gap-3 px-4 py-2.5">
                 <div className="h-6 w-6 rounded-sm bg-forest text-white grid place-items-center text-[10px] font-display font-bold">
                   {i + 1}

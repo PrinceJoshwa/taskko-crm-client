@@ -408,7 +408,7 @@
 //   );
 // }
 import React, { useEffect, useState } from "react";
-import { api, STAGE_META, SOURCE_LABEL, inr, relTime } from "@/lib/api";
+import { api, asArray, STAGE_META, SOURCE_LABEL, inr, relTime } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { DASH } from "@/constants/testIds";
 import { Link, useNavigate } from "react-router-dom";
@@ -454,6 +454,10 @@ function RevenueBreakdownDialog({ open, onClose }) {
     setData(null);
     api.get("/dashboard/revenue-breakdown").then((r) => setData(r.data));
   }, [open]);
+  if (data) {
+    data.by_agent = asArray(data.by_agent);
+    data.by_project = asArray(data.by_project);
+  }
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="rounded-sm max-w-3xl">
@@ -533,6 +537,13 @@ function MonthlyTab() {
   
   // ADDED: !data.period check to prevent crashes on undefined data
   if (!data || !data.period) return <div className="text-forest/50 text-sm">Loading…</div>;
+  data.kpi = data.kpi || {};
+  data.revenue = data.revenue || {};
+  data.telemetry = asArray(data.telemetry);
+  data.pipeline = asArray(data.pipeline);
+  data.top_leads = asArray(data.top_leads);
+  data.recent_inquiries = asArray(data.recent_inquiries);
+  data.upcoming_closures = asArray(data.upcoming_closures);
 
   const period = `${new Date(data.period.start).toLocaleDateString("en-IN", { month: "short", day: "numeric" })} – ${new Date(new Date(data.period.end).getTime() - 86400000).toLocaleDateString("en-IN", { month: "short", day: "numeric" })}`;
 
@@ -694,6 +705,10 @@ function ActionItemsTab() {
   
   // ADDED: !data.widgets check to prevent crashes on undefined data
   if (!data || !data.widgets) return <div className="text-forest/50 text-sm">Loading…</div>;
+  data.todays_followups = asArray(data.todays_followups);
+  data.planned_visits = asArray(data.planned_visits);
+  data.no_call_leads = asArray(data.no_call_leads);
+  data.no_followup_leads = asArray(data.no_followup_leads);
 
   const w = data.widgets;
   const today = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" });

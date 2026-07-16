@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { api, formatApiError, STAGE_META, STAGE_LABEL, SOURCE_LABEL, inr, relTime } from "@/lib/api";
+import { api, asArray, formatApiError, STAGE_META, STAGE_LABEL, SOURCE_LABEL, inr, relTime } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { LEADS } from "@/constants/testIds";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -284,7 +284,11 @@ export default function LeadDetail() {
       api.get("/activities", { params: { lead_id: leadId, limit: 100 } }),
       api.get("/whatsapp-templates"),
     ]);
-    setLead(l.data); setUsers(u.data); setProjects(p.data); setActivities(a.data); setTemplates(t.data);
+    setLead(l.data);
+    setUsers(asArray(u.data));
+    setProjects(asArray(p.data));
+    setActivities(asArray(a.data));
+    setTemplates(asArray(t.data));
     setVisitProjectId(l.data.project_id || "");
   };
 

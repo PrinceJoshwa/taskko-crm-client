@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { api, formatApiError, inr } from "@/lib/api";
+import { api, asArray, formatApiError, inr } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProjects } from "@/contexts/ProjectContext";
 import { PROJECT } from "@/constants/testIds";
@@ -18,7 +18,7 @@ export default function Projects() {
 
   const load = async () => {
     const { data } = await api.get("/projects");
-    setProjects(data);
+    setProjects(asArray(data));
   };
   useEffect(() => { load(); }, []);
 
