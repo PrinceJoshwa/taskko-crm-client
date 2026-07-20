@@ -852,8 +852,14 @@ export default function Dashboard() {
           <TabsTrigger data-testid={DASH.tabMonth} value="month" className="rounded-sm data-[state=active]:bg-forest data-[state=active]:text-white text-forest px-4 py-1.5 text-xs uppercase tracking-[0.18em] font-bold">Month's Updates</TabsTrigger>
           <TabsTrigger data-testid={DASH.tabActions} value="actions" className="rounded-sm data-[state=active]:bg-forest data-[state=active]:text-white text-forest px-4 py-1.5 text-xs uppercase tracking-[0.18em] font-bold">Action Items</TabsTrigger>
         </TabsList>
-        <TabsContent value="month" className="mt-6"><MonthlyTab /></TabsContent>
-        <TabsContent value="actions" className="mt-6"><ActionItemsTab /></TabsContent>
+        
+        {/* Only mount and fetch data if the tab is currently active */}
+        {tab === "month" && (
+          <TabsContent value="month" className="mt-6"><MonthlyTab /></TabsContent>
+        )}
+        {tab === "actions" && (
+          <TabsContent value="actions" className="mt-6"><ActionItemsTab /></TabsContent>
+        )}
       </Tabs>
     </div>
   );
