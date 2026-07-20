@@ -292,8 +292,8 @@ export default function LeadDetail() {
     setVisitProjectId(l.data.project_id || "");
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [leadId]);
-
+// eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); }, [leadId]);
   if (!lead) return <div className="text-forest/50 text-sm">Loading lead…</div>;
 
   const owner = users.find((u) => u.id === lead.assigned_to);

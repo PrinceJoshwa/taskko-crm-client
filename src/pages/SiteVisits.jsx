@@ -33,8 +33,8 @@ export default function SiteVisits() {
     setLeads(asArray(l.data));
     setUsers(asArray(u.data));
   };
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [activeId]);
-
+// eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); }, [activeId]);
   const filtered = visits.filter((v) => !status || v.status === status);
   const grouped = filtered.reduce((acc, v) => {
     const d = new Date(v.scheduled_at).toDateString();

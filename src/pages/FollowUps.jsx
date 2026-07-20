@@ -21,8 +21,9 @@ export default function FollowUps() {
     setItems(asArray(fu.data));
     setLeads(asArray(l.data));
   };
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [status]);
-
+// eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); }, [status]);
+  
   const complete = async (id) => {
     await api.patch(`/follow-ups/${id}`, { status: "done" });
     toast.success("Follow-up completed");

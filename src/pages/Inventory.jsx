@@ -186,8 +186,8 @@ export default function Inventory() {
     const { data } = await api.get("/units", { params: { project_id: projectFilter } });
     setUnits(asArray(data));
   };
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [projectFilter]);
-
+// eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); }, [projectFilter]);
   const filtered = useMemo(() => units.filter((u) => !statusFilter || u.status === statusFilter), [units, statusFilter]);
 
   const byTower = useMemo(() => {

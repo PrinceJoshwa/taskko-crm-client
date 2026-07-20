@@ -320,8 +320,8 @@ export default function Leads() {
     }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [stage, source, q, execFilter, projectFilter, createdFilter]);
-
+// eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); }, [stage, source, q, execFilter, projectFilter, createdFilter]);
   const move = async (leadId, newStage) => {
     setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, stage: newStage } : l)));
     try {
