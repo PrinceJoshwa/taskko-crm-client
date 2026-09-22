@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { api, asArray, formatApiError } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -69,7 +69,7 @@ export default function Team() {
   const [loadError, setLoadError] = useState("");
   const canManage = user?.role === "admin" || user?.role === "super_admin";
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     setLoadError("");
     try {
@@ -81,8 +81,8 @@ export default function Team() {
       setUsers([]);
       setLoadError(formatApiError(e.response?.data?.detail));
     } finally { setLoading(false); }
-  };
-  useEffect(() => { if (user && activeOrganizationId) load(); }, [user, activeOrganizationId]);
+  }, [user?.role]);
+  useEffect(() => { if (user && activeOrganizationId) load(); }, [user, activeOrganizationId, load]);
 
   const submit = async () => {
     try {
