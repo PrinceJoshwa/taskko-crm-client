@@ -152,7 +152,7 @@ export default function WhatsApp() {
   const navigate = useNavigate();
   const { feature: featureParam } = useParams();
   const { user } = useAuth();
-  const canManageMessaging = ["admin", "manager", "super_admin"].includes(user?.role);
+  const canManageMessaging = ["admin", "manager", "executive", "super_admin"].includes(user?.role);
   const [status, setStatus] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [campaigns, setCampaigns] = useState([]);

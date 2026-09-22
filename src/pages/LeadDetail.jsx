@@ -372,7 +372,7 @@ export default function LeadDetail() {
       setActivities(asArray(a.data));
       setCoAssignees(l.data.co_assigned_to || []);
       setVisitProjectId(l.data.project_id || "");
-      if (["admin", "super_admin"].includes(user?.role)) {
+      if (["admin", "manager", "executive", "super_admin"].includes(user?.role)) {
         api.get("/whatsapp-templates")
           .then((t) => setTemplates(asArray(t.data)))
           .catch(() => setTemplates([]));
@@ -518,7 +518,7 @@ export default function LeadDetail() {
             </div>
           </div>
 
-          {["admin", "super_admin"].includes(user?.role) && <WhatsAppPanel leadId={leadId} />}
+          {["admin", "manager", "executive", "super_admin"].includes(user?.role) && <WhatsAppPanel leadId={leadId} />}
 
           {/* Calling provider button + manual log actions */}
           <div className="grid grid-cols-4 gap-3">
@@ -745,7 +745,7 @@ export default function LeadDetail() {
               </DialogContent>
             </Dialog>
 
-            {["admin", "super_admin"].includes(user?.role) && lead.phone && (
+            {["admin", "manager", "executive", "super_admin"].includes(user?.role) && lead.phone && (
               <a href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="w-full h-10 rounded-sm bg-[#25D366]/10 text-[#128C7E] text-sm font-medium inline-flex items-center justify-center gap-2 hover:bg-[#25D366]/20 transition-colors duration-150">
                 <MessageSquare className="h-4 w-4" /> WhatsApp
               </a>
