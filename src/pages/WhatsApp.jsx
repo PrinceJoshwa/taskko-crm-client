@@ -1,10 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, asArray, formatApiError, relTime } from "@/lib/api";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Layers, MessageSquare, PlugZap, RefreshCw, Send, Users, Search, MoreVertical, Paperclip, Smile, CheckCheck, Image as ImageIcon, FileText, Mic, Phone, Video, Star, Archive, UserRound,
+  Layers, MessageSquare, PlugZap, RefreshCw, Send, Users, Search, MoreVertical, Paperclip, Smile, CheckCheck, Image as ImageIcon, FileText, Mic, Phone, Video, Star, Archive, UserRound, Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -163,6 +163,9 @@ export default function WhatsApp() {
   const [search, setSearch] = useState("");
   const [draft, setDraft] = useState("");
   const [replyBusy, setReplyBusy] = useState(false);
+  const [attachmentBusy, setAttachmentBusy] = useState(false);
+  const [, setHiddenChatIds] = useState(() => new Set(JSON.parse(window.localStorage.getItem("propzel_hidden_whatsapp_chats") || "[]")));
+  const attachmentInput = useRef(null);
   const feature = FEATURE_KEYS.has(featureParam) ? featureParam : "dashboard";
   const activeFeature = FEATURES.find((f) => f.key === feature);
 
@@ -179,6 +182,65 @@ export default function WhatsApp() {
     finally { setReplyBusy(false); }
   };
 
+  const hideConversationLocally = () => {
+    if (!active) return;
+    if (!window.confirm("Remove this chat from this browser only? The CRM, lead, messages, and database will remain unchanged.")) return;
+    setHiddenChatIds((previous) => {
+      const next = new Set(previous);
+      next.add(active.id);
+      window.localStorage.setItem("propzel_hidden_whatsapp_chats", JSON.stringify([...next]));
+      return next;
+    });
+    setActive(null);
+    setMessages([]);
+  };
+
+  const sendAttachment = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !active || attachmentBusy) return;
+    if (!active.lead_id) return toast.error("Attachments can only be sent to a conversation linked to a CRM lead.");
+    if (file.size > 16 * 1024 * 1024) return toast.error("Attachments must be 16 MB or smaller.");
+    setAttachmentBusy(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      if (draft.trim()) form.append("caption", draft.trim());
+      await api.post(`/whatsapp/conversations/${active.id}/attachments`, form, { headers: { "Content-Type": "multipart/form-data" } });
+      setDraft("");
+      const response = await api.get(`/whatsapp/conversations/${active.id}/messages`);
+      setMessages(asArray(response.data));
+      load();
+      toast.success("Attachment sent");
+    } catch (e) { toast.error(formatApiError(e.response?.data?.detail)); }
+    finally { setAttachmentBusy(false); }
+  };
+
+  // The inbox toolbar is shared with the existing WhatsApp layout. These
+  // handlers preserve its compact icon-only controls while adding the real
+  // attachment picker and browser-local remove action.
+  useEffect(() => {
+    const handleToolbarAction = (event) => {
+      const attach = event.target.closest('button[title="Attach file"]');
+      const more = event.target.closest('button[title="More actions"]');
+      if (more) {
+        more.title = "Remove from this browser";
+        hideConversationLocally();
+        return;
+      }
+      if (!attach || attachmentBusy) return;
+      const input = document.createElement("input");
+      input.type = "file";
+      input.onchange = (changeEvent) => {
+        sendAttachment(changeEvent);
+        input.remove();
+      };
+      input.click();
+    };
+    document.addEventListener("click", handleToolbarAction);
+    return () => document.removeEventListener("click", handleToolbarAction);
+  }, [active, attachmentBusy, draft]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const load = async () => {
     const [sr, ar, cr, lr, cpr] = await Promise.all([
       api.get("/whatsapp/status"),
@@ -191,9 +253,11 @@ export default function WhatsApp() {
     setAnalytics(ar.data);
     setCampaigns(asArray(cpr.data));
     const conversations = asArray(cr.data);
-    setItems(conversations);
+    const locallyHidden = new Set(JSON.parse(window.localStorage.getItem("propzel_hidden_whatsapp_chats") || "[]"));
+    const visibleConversations = conversations.filter((conversation) => !locallyHidden.has(conversation.id));
+    setItems(visibleConversations);
     setLeads(asArray(lr.data));
-    if (!active && conversations[0]) setActive(conversations[0]);
+    if (!active && visibleConversations[0]) setActive(visibleConversations[0]);
   };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
