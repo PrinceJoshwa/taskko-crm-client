@@ -7,6 +7,7 @@ import {
   Layers, MessageSquare, PlugZap, RefreshCw, Send, Users, Search, MoreVertical, Paperclip, Smile, CheckCheck, Image as ImageIcon, FileText, Mic, Phone, Video, Star, Archive, UserRound, Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 const FEATURES = [
   { key: "single", label: "Send Single Message", hint: "Send a quick message to a lead", icon: Send },
@@ -150,6 +151,8 @@ function BulkSendDialog({ leads, onSent, children }) {
 export default function WhatsApp() {
   const navigate = useNavigate();
   const { feature: featureParam } = useParams();
+  const { user } = useAuth();
+  const canManageMessaging = ["admin", "manager", "super_admin"].includes(user?.role);
   const [status, setStatus] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [campaigns, setCampaigns] = useState([]);
@@ -166,8 +169,9 @@ export default function WhatsApp() {
   const [attachmentBusy, setAttachmentBusy] = useState(false);
   const [, setHiddenChatIds] = useState(() => new Set(JSON.parse(window.localStorage.getItem("propzel_hidden_whatsapp_chats") || "[]")));
   const attachmentInput = useRef(null);
-  const feature = FEATURE_KEYS.has(featureParam) ? featureParam : "dashboard";
-  const activeFeature = FEATURES.find((f) => f.key === feature);
+  const availableFeatures = canManageMessaging ? FEATURES : FEATURES.filter((item) => item.key === "single");
+  const feature = FEATURE_KEYS.has(featureParam) && (canManageMessaging || featureParam === "single") ? featureParam : "dashboard";
+  const activeFeature = availableFeatures.find((f) => f.key === feature);
 
   const sendReply = async () => {
     if (!active?.lead_id || !draft.trim() || replyBusy) return;
@@ -247,7 +251,7 @@ export default function WhatsApp() {
       api.get("/whatsapp/analytics"),
       api.get("/whatsapp/conversations"),
       api.get("/leads"),
-      api.get("/whatsapp/campaigns"),
+      canManageMessaging ? api.get("/whatsapp/campaigns") : Promise.resolve({ data: [] }),
     ]);
     setStatus(sr.data);
     setAnalytics(ar.data);
@@ -261,13 +265,13 @@ export default function WhatsApp() {
   };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [canManageMessaging]);
 
   // Keep the inbox current when the provider delivers a webhook message.
   useEffect(() => {
     const timer = window.setInterval(() => { load().catch(() => {}); }, 5000);
     return () => window.clearInterval(timer);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [canManageMessaging]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!active?.id) return;
@@ -377,7 +381,7 @@ export default function WhatsApp() {
         <div className="p-5">
           <div className="label-caps mb-3">Features</div>
           <div className="space-y-1">
-            {FEATURES.map((f) => {
+            {availableFeatures.map((f) => {
               const Icon = f.icon;
               const item = (
                 <button onClick={() => navigate(`/whatsapp/${f.key}`)} className={`w-full flex items-center gap-3 rounded-sm px-3 py-2.5 text-left transition-colors duration-150 ${feature === f.key ? "bg-bone-alt text-forest" : "hover:bg-bone-alt/60 text-forest/80"}`}>
@@ -414,21 +418,21 @@ export default function WhatsApp() {
                 <Send className="h-4 w-4" /> Send Message
               </button>
             </SendDialog>
-            <BulkSendDialog leads={leads} onSent={load}>
+            {canManageMessaging && <BulkSendDialog leads={leads} onSent={load}>
               <button className="h-10 px-4 rounded-sm border border-[#E6E4DD] bg-white text-forest text-sm font-medium hover:border-forest inline-flex items-center gap-2">
                 <Layers className="h-4 w-4" /> Bulk Send
               </button>
-            </BulkSendDialog>
+            </BulkSendDialog>}
           </div>
         </div>
 
-        <section className="border border-[#9AE6B4] bg-[#F0FFF4] rounded-sm p-5 flex items-start gap-3">
+        {canManageMessaging && <section className="border border-[#9AE6B4] bg-[#F0FFF4] rounded-sm p-5 flex items-start gap-3">
           <PlugZap className="h-5 w-5 mt-0.5 text-[#2D6A4F]" />
           <div>
             <div className="font-display font-bold text-lg text-forest">Admin WhatsApp connection</div>
             <div className="text-sm text-forest/70 mt-1">Propzel is configured to use the shared admin WhatsApp account from the existing Marketly service.</div>
           </div>
-        </section>
+        </section>}
 
         {feature === "dashboard" && (
           <div className="grid md:grid-cols-2 gap-4">
