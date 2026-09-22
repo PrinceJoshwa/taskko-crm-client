@@ -24,7 +24,9 @@ function PhoneCell({ member, canEdit, onSaved }) {
   useEffect(() => setVal(member.phone || ""), [member.phone]);
   const save = async () => {
     try {
-      await api.patch(`/users/${member.id}`, { phone: val });
+      // Members may maintain their own bridge number; role/admin changes
+      // remain restricted to the admin endpoint.
+      await api.patch(member.isSelf ? "/users/me" : `/users/${member.id}`, { phone: val });
       toast.success("Phone updated");
       setEdit(false);
       onSaved?.();
@@ -206,7 +208,7 @@ export default function Team() {
                 </td>
                 <td className="px-4 py-3 text-forest/70">{u.email}</td>
                 <td className="px-4 py-3">
-                  <PhoneCell member={u} canEdit={canManage} onSaved={load} />
+                  <PhoneCell member={{ ...u, isSelf: u.id === user?.id }} canEdit={canManage || u.id === user?.id} onSaved={load} />
                 </td>
                 <td className="px-4 py-3">
                   <span className={`text-[10px] uppercase tracking-[0.15em] font-bold rounded-sm px-2 py-0.5 ${ROLE_TONE[u.role] || ""}`}>{u.role}</span>
