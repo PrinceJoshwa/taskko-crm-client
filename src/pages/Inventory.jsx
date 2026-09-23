@@ -2,14 +2,13 @@ import React, { useEffect, useMemo, useState } from "react";
 import { api, asArray, inr, formatApiError } from "@/lib/api";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { INVENTORY } from "@/constants/testIds";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Download, UploadCloud, Plus, Pencil } from "lucide-react";
 import { toast } from "sonner";
-
-const BACKEND = process.env.REACT_APP_BACKEND_URL;
 
 const STATUS_COLORS = {
   available: "bg-[#2D6A4F]/10 text-[#2D6A4F] border-[#2D6A4F]/30",
@@ -21,24 +20,48 @@ const STATUS_COLORS = {
 const STATUS_ORDER = ["available", "held", "booked", "sold"];
 
 function parseCsv(text) {
-  const lines = text.split(/\r?\n/).filter((l) => l.trim());
-  if (lines.length === 0) return [];
-  const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
-  return lines.slice(1).map((line) => {
-    const cells = line.split(",");
-    const row = {};
-    headers.forEach((h, i) => { row[h] = (cells[i] || "").trim(); });
-    return row;
+  const input = String(text || "").replace(/^\uFEFF/, "");
+  const matrix = [];
+  let row = [], cell = "", quoted = false;
+  for (let i = 0; i < input.length; i++) {
+    const ch = input[i];
+    if (ch === '"' && quoted && input[i + 1] === '"') { cell += '"'; i++; }
+    else if (ch === '"') quoted = !quoted;
+    else if (ch === "," && !quoted) { row.push(cell); cell = ""; }
+    else if ((ch === "\n" || ch === "\r") && !quoted) {
+      if (ch === "\r" && input[i + 1] === "\n") i++;
+      row.push(cell); cell = "";
+      if (row.some((value) => value.trim())) matrix.push(row);
+      row = [];
+    } else cell += ch;
+  }
+  row.push(cell);
+  if (row.some((value) => value.trim())) matrix.push(row);
+  if (matrix.length < 2) return [];
+  const aliases = {
+    tower: ["tower", "tower_name", "block", "block_name", "tower_block"],
+    floor: ["floor", "floor_no", "floor_number", "level"],
+    unit_no: ["unit_no", "unit_number", "unit", "flat_no", "flat_number", "apartment_no"],
+    config: ["config", "configuration", "unit_type", "typology"],
+    carpet_area: ["carpet_area", "carpet_area_sqft", "carpet_area_sq_ft", "carpetarea"],
+    built_up_area: ["built_up_area", "builtup_area", "built_up_area_sqft", "builtup_area_sqft", "built_up_area_sq_ft", "built_up"],
+    price: ["price", "price_inr", "amount"], facing: ["facing", "direction"], status: ["status"],
+  };
+  const headers = matrix[0].map((h) => h.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, ""));
+  return matrix.slice(1).map((cells) => {
+    const source = Object.fromEntries(headers.map((header, index) => [header, (cells[index] || "").trim()]));
+    return Object.fromEntries(Object.entries(aliases).map(([field, names]) => [field, names.map((name) => source[name]).find((value) => value !== undefined) || ""]));
   });
 }
 
-function UnitEditor({ unit, onSaved, canEdit }) {
+function UnitEditor({ unit, onSaved, canEdit, supportsBuiltUpArea }) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({});
   useEffect(() => {
     if (open) setForm({
       tower: unit.tower || "", floor: unit.floor ?? 1, unit_no: unit.unit_no || "",
       config: unit.config || "", carpet_area: unit.carpet_area ?? "",
+      built_up_area: unit.built_up_area ?? "",
       price: unit.price ?? "", facing: unit.facing || "", status: unit.status || "available",
     });
   }, [open, unit]);
@@ -47,6 +70,7 @@ function UnitEditor({ unit, onSaved, canEdit }) {
       const body = { ...form };
       body.floor = Number(body.floor);
       body.carpet_area = body.carpet_area === "" ? null : Number(body.carpet_area);
+      body.built_up_area = body.built_up_area === "" ? null : Number(body.built_up_area);
       body.price = body.price === "" ? null : Number(body.price);
       Object.keys(body).forEach((k) => { if (body[k] === null || body[k] === "") delete body[k]; });
       await api.patch(`/units/${unit.id}`, body);
@@ -60,11 +84,12 @@ function UnitEditor({ unit, onSaved, canEdit }) {
       <DialogTrigger asChild>
         <button
           data-testid={INVENTORY.unitCell(unit.id)}
-          className={`border rounded-sm px-3 h-11 min-w-[86px] text-left transition-colors duration-150 hover:border-forest ${STATUS_COLORS[unit.status] || ""}`}
+          className={`border rounded-sm px-3 min-h-11 py-2 min-w-[86px] text-left transition-colors duration-150 hover:border-forest ${STATUS_COLORS[unit.status] || ""}`}
           title={`${unit.unit_no} · ${unit.config} · ${inr(unit.price)} · click to edit`}
         >
           <div className="text-[10px] uppercase tracking-[0.15em] font-bold leading-none">{unit.unit_no}</div>
           <div className="text-[10px] mt-1 opacity-75">{unit.config}</div>
+          {supportsBuiltUpArea && <div className="mt-1 text-[9px] leading-tight opacity-75">Carpet {unit.carpet_area ?? "—"} · Built-up {unit.built_up_area ?? "—"} sqft</div>}
         </button>
       </DialogTrigger>
       <DialogContent className="rounded-sm max-w-lg">
@@ -75,6 +100,7 @@ function UnitEditor({ unit, onSaved, canEdit }) {
           <F label="Unit no" value={form.unit_no} onChange={(v) => setForm({ ...form, unit_no: v })} />
           <F label="Config" value={form.config} onChange={(v) => setForm({ ...form, config: v })} />
           <F label="Carpet area (sqft)" type="number" value={form.carpet_area} onChange={(v) => setForm({ ...form, carpet_area: v })} />
+          {supportsBuiltUpArea && <F label="Built-up area (sqft)" type="number" value={form.built_up_area} onChange={(v) => setForm({ ...form, built_up_area: v })} />}
           <F label="Price (₹)" type="number" value={form.price} onChange={(v) => setForm({ ...form, price: v })} />
           <F label="Facing" value={form.facing} onChange={(v) => setForm({ ...form, facing: v })} />
           <div>
@@ -104,7 +130,14 @@ function F({ label, value, onChange, type = "text" }) {
   );
 }
 
-function ImportDialog({ projectId, projectName, onDone }) {
+function optionalNumber(value, label, rowIndex) {
+  if (value == null || String(value).trim() === "") return null;
+  const parsed = Number(String(value).replace(/,/g, "").trim());
+  if (!Number.isFinite(parsed)) throw new Error(`Invalid ${label} on CSV row ${rowIndex + 2}`);
+  return parsed;
+}
+
+function ImportDialog({ projectId, projectName, onDone, supportsBuiltUpArea }) {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState([]);
   const [fileName, setFileName] = useState("");
@@ -115,25 +148,34 @@ function ImportDialog({ projectId, projectName, onDone }) {
     if (!f) return;
     setFileName(f.name);
     const reader = new FileReader();
-    reader.onload = () => setRows(parseCsv(String(reader.result)));
+    reader.onload = () => {
+      const parsed = parseCsv(String(reader.result));
+      setRows(parsed);
+      if (!parsed.length) toast.error("No data rows found. Check that the CSV has a header row and unit rows.");
+    };
     reader.readAsText(f);
   };
   const submit = async () => {
     if (!projectId) { toast.error("Pick a project first"); return; }
     setBusy(true);
     try {
+      const preparedRows = rows.map((r, index) => ({
+        tower: r.tower, floor: optionalNumber(r.floor, "floor", index) ?? 0, unit_no: r.unit_no,
+        config: r.config, carpet_area: optionalNumber(r.carpet_area, "carpet area", index),
+        ...(supportsBuiltUpArea ? { built_up_area: optionalNumber(r.built_up_area, "built-up area", index) } : {}),
+        price: optionalNumber(r.price, "price", index), facing: r.facing || null,
+        status: (r.status || "available"),
+      }));
+      const importableRows = preparedRows.filter((r) => r.tower && r.unit_no && r.config);
+      if (!importableRows.length) { toast.error("No importable rows. Each row needs Tower, Unit No, and Configuration columns with values."); return; }
       const body = {
         project_id: projectId,
         replace_existing: replace,
-        rows: rows.map((r) => ({
-          tower: r.tower, floor: Number(r.floor || 0), unit_no: r.unit_no,
-          config: r.config, carpet_area: r.carpet_area ? Number(r.carpet_area) : null,
-          price: r.price ? Number(r.price) : null, facing: r.facing || null,
-          status: (r.status || "available"),
-        })).filter((r) => r.tower && r.unit_no && r.config),
+        rows: importableRows,
       };
       const { data } = await api.post("/units/import", body);
-      toast.success(`Imported ${data.created}${replace ? " (replaced existing)" : ""}`);
+      if (!data.created) { toast.error("No inventory units were created. Check the CSV columns and project, then retry."); return; }
+      toast.success(`Imported ${data.created} of ${importableRows.length} units${data.failed ? `; ${data.failed} failed` : ""}${replace ? " (replaced existing)" : ""}`);
       setOpen(false); setRows([]); setFileName("");
       onDone?.();
     } catch (e) { toast.error(formatApiError(e.response?.data?.detail)); }
@@ -148,7 +190,7 @@ function ImportDialog({ projectId, projectName, onDone }) {
       </DialogTrigger>
       <DialogContent className="rounded-sm max-w-lg">
         <DialogHeader><DialogTitle className="font-display text-2xl">Import units</DialogTitle></DialogHeader>
-        <div className="text-xs text-forest/60">Required columns: <code>tower, floor, unit_no, config</code>. Optional: <code>carpet_area, price, facing, status</code>.</div>
+        <div className="text-xs text-forest/60">Required: <code>tower, floor, unit_no, config</code>. Optional: <code>carpet_area, price, facing, status</code>{supportsBuiltUpArea && <> and <code>built_up_area</code></>}.</div>
         <div className="border border-forest/20 bg-forest/5 rounded-sm px-3 py-2 text-sm text-forest">
           Import target: <strong>{projectName || "Select a project before importing"}</strong>
         </div>
@@ -174,11 +216,13 @@ function ImportDialog({ projectId, projectName, onDone }) {
 
 export default function Inventory() {
   const { user } = useAuth();
+  const { activeOrganization } = useOrganization();
   const { projects, activeId } = useProjects();
   const [units, setUnits] = useState([]);
   const [statusFilter, setStatusFilter] = useState("");
   const [projectFilter, setProjectFilter] = useState(activeId && activeId !== "__all__" ? activeId : (projects[0]?.id || ""));
   const canEdit = ["admin", "manager", "super_admin"].includes(user?.role);
+  const supportsBuiltUpArea = /jagat/i.test(`${activeOrganization?.name || ""} ${activeOrganization?.slug || ""}`);
 
   useEffect(() => {
     if (!projectFilter && projects.length > 0) setProjectFilter(projects[0].id);
@@ -215,7 +259,14 @@ export default function Inventory() {
 
   const exportCsv = () => {
     if (!projectFilter) { toast.error("Pick a project first"); return; }
-    window.location.href = `${BACKEND}/api/units/export?project_id=${projectFilter}`;
+    api.get("/units/export", { params: { project_id: projectFilter }, responseType: "blob" }).then(({ data }) => {
+      const href = URL.createObjectURL(data);
+      const link = document.createElement("a");
+      link.href = href;
+      link.download = `inventory-${projectFilter}.csv`;
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(href), 1000);
+    }).catch(() => toast.error("Inventory export failed. Check project access and try again."));
   };
 
   return (
@@ -242,7 +293,7 @@ export default function Inventory() {
           <button data-testid="inv-export-btn" onClick={exportCsv} className="h-9 rounded-sm border border-[#E6E4DD] text-sm text-forest hover:border-forest transition-colors duration-150 inline-flex items-center gap-2 px-3">
             <Download className="h-4 w-4" /> Export CSV
           </button>
-          {canEdit && <ImportDialog projectId={projectFilter} projectName={projects.find((p) => p.id === projectFilter)?.name} onDone={load} />}
+          {canEdit && <ImportDialog projectId={projectFilter} projectName={projects.find((p) => p.id === projectFilter)?.name} onDone={load} supportsBuiltUpArea={supportsBuiltUpArea} />}
         </div>
       </div>
 
@@ -271,7 +322,7 @@ export default function Inventory() {
                     <div className="w-14 shrink-0 text-[10px] uppercase tracking-[0.18em] font-bold text-forest/60">Fl {f}</div>
                     <div className="flex flex-wrap gap-1.5">
                       {floors[f].map((u) => (
-                        <UnitEditor key={u.id} unit={u} onSaved={load} canEdit={canEdit} />
+                        <UnitEditor key={u.id} unit={u} onSaved={load} canEdit={canEdit} supportsBuiltUpArea={supportsBuiltUpArea} />
                       ))}
                     </div>
                   </div>

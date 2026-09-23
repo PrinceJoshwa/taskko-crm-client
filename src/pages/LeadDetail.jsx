@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { api, asArray, formatApiError, STAGE_META, STAGE_LABEL, SOURCE_LABEL, inr, relTime } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { LEADS } from "@/constants/testIds";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { ArrowLeft, Phone, Mail, MessageSquare, CalendarPlus, BellPlus, PhoneCall, Send, PhoneMissed, Download, PhoneOutgoing, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Phone, Mail, MessageSquare, CalendarPlus, BellPlus, PhoneCall, Send, PhoneMissed, Download, PhoneOutgoing, Pencil, Trash2, Paperclip, FileText } from "lucide-react";
 import { toast } from "sonner";
 import StarRating from "@/components/StarRating";
 
@@ -271,6 +271,8 @@ function WhatsAppPanel({ leadId }) {
   const [data, setData] = useState(null);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
+  const [attachmentBusy, setAttachmentBusy] = useState(false);
+  const attachmentInput = useRef(null);
 
   const load = async () => {
     try {
@@ -300,6 +302,30 @@ function WhatsAppPanel({ leadId }) {
     }
   };
 
+  const sendAttachment = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || attachmentBusy) return;
+    if (file.size > 16 * 1024 * 1024) {
+      toast.error("Attachments must be 16 MB or smaller.");
+      return;
+    }
+    setAttachmentBusy(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      if (text.trim()) form.append("caption", text.trim());
+      await api.post(`/leads/${leadId}/whatsapp/attachments`, form);
+      setText("");
+      await load();
+      toast.success("WhatsApp attachment sent");
+    } catch (e) {
+      toast.error(formatApiError(e.response?.data?.detail));
+    } finally {
+      setAttachmentBusy(false);
+    }
+  };
+
   const messages = data?.messages || [];
   return (
     <div className="border border-[#E6E4DD] bg-white rounded-sm p-6">
@@ -317,16 +343,23 @@ function WhatsAppPanel({ leadId }) {
           <div className="min-h-[160px] max-h-[280px] overflow-y-auto border border-[#E6E4DD] rounded-sm p-3 bg-bone-alt/40 space-y-2">
             {messages.length === 0 && <div className="text-sm text-forest/50 text-center py-12">No WhatsApp messages yet.</div>}
             {messages.map((m) => (
-              <div key={m.id} className={`flex ${m.direction === "outgoing" ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[80%] rounded-sm px-3 py-2 text-sm ${m.direction === "outgoing" ? "bg-forest text-white" : "bg-white border border-[#E6E4DD] text-forest"}`}>
-                  <div>{m.text}</div>
+                <div key={m.id} className={`flex ${m.direction === "outgoing" ? "justify-end" : "justify-start"}`}>
+                  <div className={`max-w-[80%] rounded-sm px-3 py-2 text-sm ${m.direction === "outgoing" ? "bg-forest text-white" : "bg-white border border-[#E6E4DD] text-forest"}`}>
+                  {m.media_url && (m.message_type || m.type) === "image" ? <img src={m.media_url} alt={m.filename || "WhatsApp attachment"} className="max-h-56 max-w-full rounded-sm mb-1 object-contain" /> : null}
+                  {m.media_url && (m.message_type || m.type) !== "image" ? <a href={m.media_url} target="_blank" rel="noreferrer" className="flex items-center gap-2 underline"><FileText className="h-4 w-4" />{m.filename || "Open attachment"}</a> : null}
+                  {m.text && <div className="whitespace-pre-wrap">{m.text}</div>}
+                  {!m.text && !m.media_url && m.filename && <div className="flex items-center gap-2"><FileText className="h-4 w-4" />{m.filename}</div>}
                   <div className={`text-[10px] mt-1 ${m.direction === "outgoing" ? "text-white/60" : "text-forest/40"}`}>{relTime(m.created_at)}</div>
                 </div>
               </div>
             ))}
           </div>
           <div className="flex gap-2 mt-3">
-            <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") send(); }} placeholder="Type a WhatsApp message..." className="flex-1 h-10 border border-[#E6E4DD] rounded-sm px-3 text-sm focus:outline-none focus:border-forest" />
+            <input ref={attachmentInput} type="file" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" onChange={sendAttachment} className="hidden" />
+            <button type="button" title="Attach file" aria-label="Attach file" onClick={() => attachmentInput.current?.click()} disabled={busy || attachmentBusy} className="h-10 w-10 shrink-0 border border-[#E6E4DD] rounded-sm grid place-items-center text-forest hover:border-forest disabled:opacity-50">
+              <Paperclip className="h-4 w-4" />
+            </button>
+            <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") send(); }} placeholder={attachmentBusy ? "Uploading attachment..." : "Type a WhatsApp message..."} className="flex-1 min-w-0 h-10 border border-[#E6E4DD] rounded-sm px-3 text-sm focus:outline-none focus:border-forest" />
             <button onClick={send} disabled={busy || !text.trim()} className="h-10 px-4 rounded-sm bg-forest text-white text-sm font-medium hover:bg-forest-soft transition-colors duration-150 disabled:opacity-50">
               Send
             </button>
