@@ -426,6 +426,7 @@ export default function LeadDetail() {
   const owner = users.find((u) => u.id === lead.assigned_to);
   const project = projects.find((p) => p.id === lead.project_id);
   const canModifyLead = ["admin", "manager", "super_admin"].includes(user?.role);
+  const canChangeStage = ["admin", "manager", "executive", "sales", "super_admin"].includes(user?.role);
 
   const changeStage = async (newStage) => {
     const note = newStage === "lost" ? window.prompt("Add a reason for marking this lead as lost:") : "";
@@ -647,8 +648,8 @@ export default function LeadDetail() {
                   key={s.key}
                   data-testid={LEADS.stageBtn}
                   data-stage={s.key}
-                  onClick={() => canModifyLead && changeStage(s.key)}
-                  disabled={!canModifyLead}
+                  onClick={() => canChangeStage && changeStage(s.key)}
+                  disabled={!canChangeStage}
                   className={`text-xs font-medium h-9 rounded-sm border transition-colors duration-150 disabled:opacity-50 ${s.key === lead.stage ? "border-forest bg-forest text-white" : "border-[#E6E4DD] text-forest hover:border-forest"}`}
                 >
                   {s.label}

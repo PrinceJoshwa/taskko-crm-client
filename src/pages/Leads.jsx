@@ -304,7 +304,8 @@ export default function Leads() {
   const [projectFilter, setProjectFilter] = useState(params.get("project_id") || "");
   const [createdFilter, setCreatedFilter] = useState(params.get("created") || "");
   const [loading, setLoading] = useState(false);
-  const canModifyLead = ["admin", "super_admin"].includes(user?.role);
+  const canCreateLead = ["admin", "super_admin"].includes(user?.role);
+  const canMoveLead = ["admin", "manager", "executive", "sales", "super_admin"].includes(user?.role);
 
   // Sync filters → URL
   useEffect(() => {
@@ -387,7 +388,7 @@ export default function Leads() {
               <List className="h-3.5 w-3.5" /> List
             </button>
           </div>
-          {canModifyLead && <LeadCreateDialog users={users} projects={projects} activeProjectId={activeId !== "__all__" ? activeId : ""} onCreated={load} />}
+          {canCreateLead && <LeadCreateDialog users={users} projects={projects} activeProjectId={activeId !== "__all__" ? activeId : ""} onCreated={load} />}
         </div>
       </div>
 
@@ -441,7 +442,7 @@ export default function Leads() {
       {loading ? (
         <div className="text-forest/50 text-sm">Loading…</div>
       ) : view === "kanban" ? (
-        <KanbanBoard leads={leads} onMove={move} users={users} canMove={canModifyLead} />
+        <KanbanBoard leads={leads} onMove={move} users={users} canMove={canMoveLead} />
       ) : (
         <LeadsTable leads={leads} users={users} />
       )}
