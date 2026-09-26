@@ -31,7 +31,7 @@ const GROUPS = [
   {
     label: "My Console",
     items: [
-      { to: "/reports", label: "Reports", icon: BarChart3, testId: NAV.itemReports },
+      { to: "/reports", label: "Reports", icon: BarChart3, testId: NAV.itemReports, role: ["admin", "super_admin"] },
       { to: "/super-admin", label: "Super Admin", icon: UserCog, role: ["super_admin"] },
       { to: "/data-import", label: "Data Import", icon: UploadCloud, testId: NAV.itemDataImport, role: ["admin", "super_admin"] },
       { to: "/callerdesk", label: "CallerDesk", icon: PhoneCall, role: ["admin", "manager", "super_admin"] },

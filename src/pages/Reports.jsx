@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Download, Filter, RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
 import { BarChart, Bar, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 
 const today = new Date();
 const monthAgo = new Date(today.getTime() - 30 * 86400000);
@@ -58,6 +58,7 @@ function Table({ columns, rows }) {
 
 export default function Reports() {
   const { user } = useAuth();
+  if (user && !["admin", "super_admin"].includes(user.role)) return <Navigate to="/" replace />;
   const [filters, setFilters] = useState(initialFilters); const [users, setUsers] = useState([]); const [summary, setSummary] = useState(null); const [activity, setActivity] = useState([]); const [daily, setDaily] = useState([]); const [sources, setSources] = useState([]); const [statusRows, setStatusRows] = useState([]); const [notInterested, setNotInterested] = useState([]); const [callRows, setCallRows] = useState([]); const [callType, setCallType] = useState(""); const [callBusy, setCallBusy] = useState(false); const [busy, setBusy] = useState(false);
   const params = useMemo(() => ({ ...filters, ...(filters.stage === "all" ? { stage: undefined } : {}), ...(filters.source === "all" ? { source: undefined } : {}), ...(filters.assigned_to === "all" ? { assigned_to: undefined } : {}) }), [filters]);
   window.__propzelReportFilters = filters;

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { api, asArray, formatApiError } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { CONSOLE } from "@/constants/testIds";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Plus, Trash2, Phone, Mail, MapPin } from "lucide-react";
@@ -10,9 +11,12 @@ const EMPTY = { name: "", company: "", phone: "", email: "", city: "", rera: "",
 
 export default function ChannelPartners() {
   const { user } = useAuth();
+  const { activeOrganization } = useOrganization();
   const [items, setItems] = useState([]);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(EMPTY);
+  const isJagati = /jagat/i.test(`${activeOrganization?.name || ""} ${activeOrganization?.slug || ""}`);
+  const canManagePartners = ["admin", "super_admin"].includes(user?.role) || (user?.role === "manager" && isJagati);
 
   const load = async () => setItems(asArray((await api.get("/channel-partners")).data));
   useEffect(() => { load(); }, []);
@@ -40,7 +44,7 @@ export default function ChannelPartners() {
           <h2 className="font-display font-black text-3xl text-forest tracking-tight mt-1">Channel partners</h2>
           <div className="text-sm text-forest/60 mt-1">Brokers, agencies and referrers sourcing leads into Propzel.</div>
         </div>
-        {["admin", "super_admin"].includes(user?.role) && <Dialog open={open} onOpenChange={setOpen}>
+        {canManagePartners && <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <button data-testid={CONSOLE.cpNewBtn} className="h-9 rounded-sm bg-forest text-white text-sm px-3.5 font-medium hover:bg-forest-soft transition-colors duration-150 inline-flex items-center gap-2">
               <Plus className="h-4 w-4" /> New partner

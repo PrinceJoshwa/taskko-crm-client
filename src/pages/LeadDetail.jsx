@@ -142,18 +142,18 @@ function LogEmailDialog({ leadId, onSaved }) {
   const [body, setBody] = useState("");
   const submit = async () => {
     if (!subject.trim() || !body.trim()) return;
-    try { await api.post(`/leads/${leadId}/log-email`, { subject, body }); toast.success("Email logged"); setOpen(false); setSubject(""); setBody(""); onSaved?.(); }
+    try { await api.post(`/leads/${leadId}/log-email`, { subject, body }); toast.success("Email sent"); setOpen(false); setSubject(""); setBody(""); onSaved?.(); }
     catch (e) { toast.error(formatApiError(e.response?.data?.detail)); }
   };
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <button data-testid={LEADS.logEmailBtn} className="h-10 rounded-sm border border-[#E6E4DD] text-sm text-forest hover:border-forest transition-colors duration-150 inline-flex items-center justify-center gap-2 flex-1">
-          <Mail className="h-4 w-4" /> Log email
+          <Mail className="h-4 w-4" /> Send email
         </button>
       </DialogTrigger>
       <DialogContent className="rounded-sm max-w-md">
-        <DialogHeader><DialogTitle className="font-display text-2xl">Log an email</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle className="font-display text-2xl">Send email</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div>
             <div className="label-caps mb-1.5">Subject</div>
@@ -165,7 +165,7 @@ function LogEmailDialog({ leadId, onSaved }) {
           </div>
         </div>
         <DialogFooter>
-          <button data-testid={LEADS.submitEmailBtn} onClick={submit} disabled={!subject.trim() || !body.trim()} className="h-9 px-4 rounded-sm bg-forest text-white text-sm font-medium hover:bg-forest-soft transition-colors duration-150 disabled:opacity-50">Log email</button>
+          <button data-testid={LEADS.submitEmailBtn} onClick={submit} disabled={!subject.trim() || !body.trim()} className="h-9 px-4 rounded-sm bg-forest text-white text-sm font-medium hover:bg-forest-soft transition-colors duration-150 disabled:opacity-50">Send email</button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
