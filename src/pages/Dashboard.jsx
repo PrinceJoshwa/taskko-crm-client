@@ -410,6 +410,7 @@
 import React, { useEffect, useState } from "react";
 import { api, asArray, formatApiError, STAGE_META, SOURCE_LABEL, inr, relTime } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { DASH } from "@/constants/testIds";
 import { Link, useNavigate } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -539,6 +540,7 @@ function RevenueBreakdownDialog({ open, onClose }) {
 
 function MonthlyTab() {
   const { user } = useAuth();
+  const { activeOrganization } = useOrganization();
   const nav = useNavigate();
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
@@ -564,6 +566,7 @@ function MonthlyTab() {
   data.upcoming_closures = asArray(data.upcoming_closures);
 
   const period = `${new Date(data.period.start).toLocaleDateString("en-IN", { month: "short", day: "numeric" })} – ${new Date(new Date(data.period.end).getTime() - 86400000).toLocaleDateString("en-IN", { month: "short", day: "numeric" })}`;
+  const isJagati = /jagat/i.test(`${activeOrganization?.name || ""} ${activeOrganization?.slug || ""}`);
 
   return (
     <div className="space-y-6">
@@ -573,6 +576,7 @@ function MonthlyTab() {
             Hi, <span className="text-clay">{user?.name?.split(" ")[0]}</span>.
           </div>
           <div className="text-sm text-forest/60 mt-1">Your current month's highlights · {period}</div>
+          {isJagati && <div className="mt-2 inline-flex items-center border border-[#E6E4DD] bg-white px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] font-semibold text-forest/70">Jagati × Propzel</div>}
         </div>
         <div className="flex items-end gap-2"><label className="label-caps">From<input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="block mt-1 h-9 border border-[#E6E4DD] rounded-sm px-2 text-sm font-normal" /></label><label className="label-caps">To<input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="block mt-1 h-9 border border-[#E6E4DD] rounded-sm px-2 text-sm font-normal" /></label></div>
       </div>
@@ -850,17 +854,19 @@ function LeadListPanel({ title, items, empty }) {
 }
 
 function OutreachTelemetry() {
+  const { user } = useAuth();
+  const canViewTeam = ["admin", "super_admin"].includes(user?.role);
   const [summary, setSummary] = useState(null);
   const [users, setUsers] = useState([]);
   const [assignedTo, setAssignedTo] = useState("");
   const [start, setStart] = useState(() => new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10));
   const [end, setEnd] = useState(() => new Date().toISOString().slice(0, 10));
   const load = () => api.get("/reports/summary", { params: { start, end, ...(assignedTo ? { assigned_to: assignedTo } : {}) } }).then((r) => setSummary(r.data)).catch(() => {});
-  useEffect(() => { api.get("/users").then((r) => setUsers(asArray(r.data))).catch(() => {}); }, []);
+  useEffect(() => { if (canViewTeam) api.get("/users").then((r) => setUsers(asArray(r.data))).catch(() => {}); }, [canViewTeam]);
   useEffect(() => { load(); }, [start, end, assignedTo]); // eslint-disable-line react-hooks/exhaustive-deps
   const a = summary?.activity || {};
   return <section className="mt-6 border border-[#E6E4DD] bg-white rounded-sm p-5">
-    <div className="flex flex-wrap items-end justify-between gap-3"><div><div className="label-caps">Team activity · selected period</div><h3 className="font-display font-bold text-xl text-forest mt-1">Call Report</h3></div><div className="flex flex-wrap items-end gap-2"><label className="text-[10px] uppercase tracking-[0.14em] text-forest/50">From<input type="date" value={start} onChange={(e) => setStart(e.target.value)} className="block mt-1 h-8 border border-[#E6E4DD] rounded-sm px-2 text-xs" /></label><label className="text-[10px] uppercase tracking-[0.14em] text-forest/50">To<input type="date" value={end} onChange={(e) => setEnd(e.target.value)} className="block mt-1 h-8 border border-[#E6E4DD] rounded-sm px-2 text-xs" /></label><label className="text-[10px] uppercase tracking-[0.14em] text-forest/50">User<select value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)} className="block mt-1 h-8 min-w-28 border border-[#E6E4DD] rounded-sm px-2 text-xs normal-case tracking-normal"><option value="">All users</option>{users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select></label><button onClick={load} title="Refresh Call Report" className="h-8 w-8 border border-[#E6E4DD] rounded-sm grid place-items-center"><RefreshCcw className="h-3.5 w-3.5" /></button></div></div>
+    <div className="flex flex-wrap items-end justify-between gap-3"><div><div className="label-caps">{canViewTeam ? "Team activity" : "My activity"} · selected period</div><h3 className="font-display font-bold text-xl text-forest mt-1">Call Report</h3></div><div className="flex flex-wrap items-end gap-2"><label className="text-[10px] uppercase tracking-[0.14em] text-forest/50">From<input type="date" value={start} onChange={(e) => setStart(e.target.value)} className="block mt-1 h-8 border border-[#E6E4DD] rounded-sm px-2 text-xs" /></label><label className="text-[10px] uppercase tracking-[0.14em] text-forest/50">To<input type="date" value={end} onChange={(e) => setEnd(e.target.value)} className="block mt-1 h-8 border border-[#E6E4DD] rounded-sm px-2 text-xs" /></label>{canViewTeam && <label className="text-[10px] uppercase tracking-[0.14em] text-forest/50">User<select value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)} className="block mt-1 h-8 min-w-28 border border-[#E6E4DD] rounded-sm px-2 text-xs normal-case tracking-normal"><option value="">All users</option>{users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select></label>}<button onClick={load} title="Refresh Call Report" className="h-8 w-8 border border-[#E6E4DD] rounded-sm grid place-items-center"><RefreshCcw className="h-3.5 w-3.5" /></button></div></div>
     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mt-5"><Kpi label="Outgoing calls" value={a.outgoing_calls} icon={Phone} tone="green" /><Kpi label="Answered" value={a.outgoing_answered} icon={Phone} tone="green" /><Kpi label="Missed" value={a.outgoing_missed} icon={PhoneMissed} tone="clay" /><Kpi label="Unique contacts" value={a.unique_outgoing} icon={Users2} tone="wheat" /><Kpi label="Incoming" value={a.incoming_calls} icon={Phone} tone="green" /><Kpi label="SMS sent" value={a.sms_sent} icon={MessageSquare} tone="green" /><Kpi label="Email sent" value={a.emails_sent} icon={Mail} tone="green" /><Kpi label="Follow-ups" value={a.followups} icon={BellRing} tone="wheat" /></div>
   </section>;
 }
