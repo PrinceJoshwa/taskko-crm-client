@@ -10,7 +10,7 @@ const EMPTY = { name: "", company: "", phone: "", email: "", city: "", rera: "",
 
 export default function ChannelPartners() {
   const { user } = useAuth();
-  const [items, setItems] = useState([]);
+  const [items, setItems] = useState([])
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(EMPTY);
 
