@@ -50,6 +50,10 @@ export default function Sidebar() {
   const { user, logout, setUser } = useAuth();
   const [profileOpen, setProfileOpen] = useState(false);
   const [phone, setPhone] = useState(user?.phone || "");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordBusy, setPasswordBusy] = useState(false);
   const phoneMasked = !!user?.phone_masked;
 
   const saveProfile = async () => {
@@ -63,6 +67,33 @@ export default function Sidebar() {
       toast.success("Profile updated");
       setProfileOpen(false);
     } catch (e) { toast.error(formatApiError(e.response?.data?.detail)); }
+  };
+
+  const changePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast.error("Enter your current password and new password");
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast.error("New password must be at least 8 characters");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("New password confirmation does not match");
+      return;
+    }
+    setPasswordBusy(true);
+    try {
+      await api.post("/users/me/password", { current_password: currentPassword, new_password: newPassword });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      toast.success("Password updated");
+    } catch (e) {
+      toast.error(formatApiError(e.response?.data?.detail));
+    } finally {
+      setPasswordBusy(false);
+    }
   };
 
   return (
@@ -110,7 +141,7 @@ export default function Sidebar() {
       <div className="relative z-10 px-4 pb-6">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => { setPhone(phoneMasked ? "" : user?.phone || ""); setProfileOpen(true); }}
+            onClick={() => { setPhone(phoneMasked ? "" : user?.phone || ""); setCurrentPassword(""); setNewPassword(""); setConfirmPassword(""); setProfileOpen(true); }}
             className="h-9 w-9 rounded-sm bg-white/10 hover:bg-white/20 grid place-items-center text-sm font-display font-bold transition-colors duration-150"
             data-testid="sidebar-profile-btn"
             title="My profile"
@@ -158,6 +189,23 @@ export default function Sidebar() {
                 className="w-full h-10 border border-[#E6E4DD] rounded-sm px-3 text-sm focus:outline-none focus:border-forest"
               />
               <div className="text-[11px] text-forest/50 mt-1">The configured calling provider uses this number when bridging calls.</div>
+            </div>
+            <div className="border-t border-[#E6E4DD] pt-4 space-y-3">
+              <div>
+                <div className="label-caps mb-1.5">Current password</div>
+                <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} autoComplete="current-password" className="w-full h-10 border border-[#E6E4DD] rounded-sm px-3 text-sm focus:outline-none focus:border-forest" />
+              </div>
+              <div>
+                <div className="label-caps mb-1.5">New password</div>
+                <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} autoComplete="new-password" minLength={8} className="w-full h-10 border border-[#E6E4DD] rounded-sm px-3 text-sm focus:outline-none focus:border-forest" />
+              </div>
+              <div>
+                <div className="label-caps mb-1.5">Confirm new password</div>
+                <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" minLength={8} className="w-full h-10 border border-[#E6E4DD] rounded-sm px-3 text-sm focus:outline-none focus:border-forest" />
+              </div>
+              <div className="flex justify-end">
+                <button type="button" disabled={passwordBusy} onClick={changePassword} className="h-9 px-4 rounded-sm border border-forest text-forest text-sm font-medium hover:bg-forest/5 disabled:opacity-50">Update password</button>
+              </div>
             </div>
           </div>
           <DialogFooter>
