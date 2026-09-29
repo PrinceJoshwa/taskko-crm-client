@@ -573,10 +573,10 @@ function MonthlyTab() {
       <div className="flex items-start gap-6 flex-wrap">
         <div className="flex-1 min-w-0">
           <div className="font-display font-black text-3xl text-forest tracking-tight">
-            Hi, <span className="text-clay">{user?.name?.split(" ")[0]}</span>.
+            Hello <span className="text-clay">{user?.name || "there"}</span>
           </div>
           <div className="text-sm text-forest/60 mt-1">Your current month's highlights · {period}</div>
-          {isJagati && <div className="mt-2 inline-flex items-center border border-[#E6E4DD] bg-white px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] font-semibold text-forest/70">Jagati × Propzel</div>}
+          {isJagati && <div className="mt-2 inline-flex items-center border border-[#E6E4DD] bg-white px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] font-semibold text-forest/70">JAGATI × PROPZEL</div>}
         </div>
         <div className="flex items-end gap-2"><label className="label-caps">From<input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="block mt-1 h-9 border border-[#E6E4DD] rounded-sm px-2 text-sm font-normal" /></label><label className="label-caps">To<input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="block mt-1 h-9 border border-[#E6E4DD] rounded-sm px-2 text-sm font-normal" /></label></div>
       </div>
