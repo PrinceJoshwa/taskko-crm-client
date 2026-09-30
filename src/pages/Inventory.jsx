@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import * as XLSX from "xlsx";
 import { api, asArray, inr, formatApiError } from "@/lib/api";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -37,6 +38,10 @@ function parseCsv(text) {
   }
   row.push(cell);
   if (row.some((value) => value.trim())) matrix.push(row);
+  return parseInventoryMatrix(matrix);
+}
+
+function parseInventoryMatrix(matrix) {
   if (matrix.length < 2) return [];
   const aliases = {
     tower: ["tower", "tower_name", "tower_no", "block", "block_name", "tower_block"],
@@ -52,6 +57,14 @@ function parseCsv(text) {
     const source = Object.fromEntries(headers.map((header, index) => [header, (cells[index] || "").trim()]));
     return Object.fromEntries(Object.entries(aliases).map(([field, names]) => [field, names.map((name) => source[name]).find((value) => value !== undefined) || ""]));
   });
+}
+
+function parseSpreadsheet(buffer) {
+  const workbook = XLSX.read(buffer, { type: "array" });
+  const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+  if (!firstSheet) return [];
+  const matrix = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "", raw: false });
+  return parseInventoryMatrix(matrix.map((row) => row.map((cell) => String(cell ?? ""))));
 }
 
 function UnitEditor({ unit, onSaved, canEdit, supportsBuiltUpArea }) {
@@ -152,7 +165,7 @@ function normalizedStatus(value, rowIndex) {
   if (!raw) return "available";
   const values = {
     available: "available", avail: "available", vacant: "available",
-    held: "held", hold: "held", "on hold": "held",
+    held: "held", hold: "held", "on hold": "held", unavailable: "held", "not available": "held", notavailable: "held",
     booked: "booked", book: "booked", reserved: "booked",
     sold: "sold", "sold out": "sold", soldout: "sold",
   };
@@ -166,15 +179,27 @@ function ImportDialog({ projectId, projectName, onDone, supportsBuiltUpArea }) {
   const [fileName, setFileName] = useState("");
   const [replace, setReplace] = useState(false);
   const [busy, setBusy] = useState(false);
-  const onFile = (e) => {
+  const setParsedFile = (file, parsed) => {
+    setFileName(file.name);
+    setRows(parsed);
+    if (!parsed.length) toast.error("No data rows found. Check that the first sheet has a header row and unit rows.");
+  };
+  const onFile = async (e) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    setFileName(f.name);
+    const extension = f.name.split(".").pop()?.toLowerCase();
+    if (extension === "xlsx" || extension === "xls") {
+      try {
+        setParsedFile(f, parseSpreadsheet(await f.arrayBuffer()));
+      } catch {
+        setRows([]); setFileName("");
+        toast.error("Could not read this Excel file. Save it as .xlsx or .csv and try again.");
+      }
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
-      const parsed = parseCsv(String(reader.result));
-      setRows(parsed);
-      if (!parsed.length) toast.error("No data rows found. Check that the CSV has a header row and unit rows.");
+      setParsedFile(f, parseCsv(String(reader.result)));
     };
     reader.readAsText(f);
   };
@@ -218,9 +243,9 @@ function ImportDialog({ projectId, projectName, onDone, supportsBuiltUpArea }) {
           Import target: <strong>{projectName || "Select a project before importing"}</strong>
         </div>
         <label className="block border-2 border-dashed border-[#E6E4DD] rounded-sm p-6 text-center hover:border-forest transition-colors duration-150 cursor-pointer">
-          <input type="file" accept=".csv" onChange={onFile} className="hidden" data-testid="inv-import-file" />
+          <input type="file" accept=".csv,.xlsx,.xls" onChange={onFile} className="hidden" data-testid="inv-import-file" />
           <UploadCloud className="h-6 w-6 mx-auto text-forest/60 mb-2" />
-          <div className="text-sm text-forest">{fileName || "Drop CSV or click to browse"}</div>
+          <div className="text-sm text-forest">{fileName || "Drop CSV or Excel file to browse"}</div>
           {rows.length > 0 && <div className="text-xs text-forest/50 mt-1">{rows.length} rows detected</div>}
         </label>
         <div className="flex items-center gap-3">
