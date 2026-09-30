@@ -39,13 +39,13 @@ function parseCsv(text) {
   if (row.some((value) => value.trim())) matrix.push(row);
   if (matrix.length < 2) return [];
   const aliases = {
-    tower: ["tower", "tower_name", "block", "block_name", "tower_block"],
-    floor: ["floor", "floor_no", "floor_number", "level"],
-    unit_no: ["unit_no", "unit_number", "unit", "flat_no", "flat_number", "apartment_no"],
+    tower: ["tower", "tower_name", "tower_no", "block", "block_name", "tower_block"],
+    floor: ["floor", "floor_no", "floor_number", "floor_name", "level"],
+    unit_no: ["unit_no", "unit_number", "unit", "flat", "flat_no", "flat_number", "apartment_no"],
     config: ["config", "configuration", "unit_type", "typology"],
     carpet_area: ["carpet_area", "carpet_area_sqft", "carpet_area_sq_ft", "carpetarea"],
-    built_up_area: ["built_up_area", "builtup_area", "built_up_area_sqft", "builtup_area_sqft", "built_up_area_sq_ft", "built_up"],
-    price: ["price", "price_inr", "amount"], facing: ["facing", "direction"], status: ["status"],
+    built_up_area: ["built_up_area", "builtup_area", "super_built_up_area", "superbuiltup_area", "built_up_area_sqft", "builtup_area_sqft", "built_up_area_sq_ft", "built_up"],
+    price: ["price", "price_inr", "amount", "cost", "sale_price"], facing: ["facing", "direction"], status: ["status", "unit_status"],
   };
   const headers = matrix[0].map((h) => h.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, ""));
   return matrix.slice(1).map((cells) => {
@@ -132,9 +132,32 @@ function F({ label, value, onChange, type = "text" }) {
 
 function optionalNumber(value, label, rowIndex) {
   if (value == null || String(value).trim() === "") return null;
-  const parsed = Number(String(value).replace(/,/g, "").trim());
+  const normalized = String(value).replace(/,/g, "").replace(/[^0-9.-]/g, "").trim();
+  const parsed = Number(normalized);
   if (!Number.isFinite(parsed)) throw new Error(`Invalid ${label} on CSV row ${rowIndex + 2}`);
   return parsed;
+}
+
+function requiredFloor(value, rowIndex) {
+  const raw = String(value ?? "").trim();
+  if (!raw) throw new Error(`Missing floor on CSV row ${rowIndex + 2}`);
+  if (["g", "gf", "ground", "ground floor"].includes(raw.toLowerCase())) return 0;
+  const parsed = optionalNumber(raw, "floor", rowIndex);
+  if (!Number.isInteger(parsed)) throw new Error(`Floor must be a whole number on CSV row ${rowIndex + 2}`);
+  return parsed;
+}
+
+function normalizedStatus(value, rowIndex) {
+  const raw = String(value ?? "").trim().toLowerCase().replace(/[\s_-]+/g, " ");
+  if (!raw) return "available";
+  const values = {
+    available: "available", avail: "available", vacant: "available",
+    held: "held", hold: "held", "on hold": "held",
+    booked: "booked", book: "booked", reserved: "booked",
+    sold: "sold", "sold out": "sold", soldout: "sold",
+  };
+  if (values[raw]) return values[raw];
+  throw new Error(`Invalid status "${value}" on CSV row ${rowIndex + 2}. Use available, held, booked, or sold.`);
 }
 
 function ImportDialog({ projectId, projectName, onDone, supportsBuiltUpArea }) {
@@ -160,11 +183,11 @@ function ImportDialog({ projectId, projectName, onDone, supportsBuiltUpArea }) {
     setBusy(true);
     try {
       const preparedRows = rows.map((r, index) => ({
-        tower: r.tower, floor: optionalNumber(r.floor, "floor", index) ?? 0, unit_no: r.unit_no,
+        tower: r.tower, floor: requiredFloor(r.floor, index), unit_no: r.unit_no,
         config: r.config, carpet_area: optionalNumber(r.carpet_area, "carpet area", index),
         ...(supportsBuiltUpArea ? { built_up_area: optionalNumber(r.built_up_area, "built-up area", index) } : {}),
         price: optionalNumber(r.price, "price", index), facing: r.facing || null,
-        status: (r.status || "available"),
+        status: normalizedStatus(r.status, index),
       }));
       const importableRows = preparedRows.filter((r) => r.tower && r.unit_no && r.config);
       if (!importableRows.length) { toast.error("No importable rows. Each row needs Tower, Unit No, and Configuration columns with values."); return; }
@@ -174,11 +197,11 @@ function ImportDialog({ projectId, projectName, onDone, supportsBuiltUpArea }) {
         rows: importableRows,
       };
       const { data } = await api.post("/units/import", body);
-      if (!data.created) { toast.error("No inventory units were created. Check the CSV columns and project, then retry."); return; }
-      toast.success(`Imported ${data.created} of ${importableRows.length} units${data.failed ? `; ${data.failed} failed` : ""}${replace ? " (replaced existing)" : ""}`);
+      if (!data.created) { toast.error(data.errors?.[0]?.message || "No inventory units were created. Check the CSV columns and project, then retry."); return; }
+      toast.success(`Imported ${data.created} of ${importableRows.length} units${data.failed ? `; ${data.failed} failed${data.errors?.[0]?.message ? ` (${data.errors[0].message})` : ""}` : ""}${replace ? " (replaced existing)" : ""}`);
       setOpen(false); setRows([]); setFileName("");
       onDone?.();
-    } catch (e) { toast.error(formatApiError(e.response?.data?.detail)); }
+    } catch (e) { toast.error(e?.message || formatApiError(e.response?.data?.detail)); }
     finally { setBusy(false); }
   };
   return (
