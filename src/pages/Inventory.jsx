@@ -97,7 +97,7 @@ function UnitEditor({ unit, onSaved, canEdit, supportsBuiltUpArea }) {
       <DialogTrigger asChild>
         <button
           data-testid={INVENTORY.unitCell(unit.id)}
-          className={`border rounded-sm px-3 min-h-11 py-2 min-w-[86px] text-left transition-colors duration-150 hover:border-forest ${STATUS_COLORS[unit.status] || ""}`}
+          className={`w-full border rounded-sm px-3 min-h-11 py-2 text-left transition-colors duration-150 hover:border-forest ${STATUS_COLORS[unit.status] || ""}`}
           title={`${unit.unit_no} · ${unit.config} · ${inr(unit.price)} · click to edit`}
         >
           <div className="text-[10px] uppercase tracking-[0.15em] font-bold leading-none">{unit.unit_no}</div>
@@ -154,7 +154,15 @@ function optionalNumber(value, label, rowIndex) {
 function requiredFloor(value, rowIndex) {
   const raw = String(value ?? "").trim();
   if (!raw) throw new Error(`Missing floor on CSV row ${rowIndex + 2}`);
-  if (["g", "gf", "ground", "ground floor"].includes(raw.toLowerCase())) return 0;
+  const namedFloors = {
+    g: 0, gf: 0, ground: 0, "ground floor": 0,
+    first: 1, "1st": 1, "1st floor": 1,
+    second: 2, "2nd": 2, "2nd floor": 2,
+    third: 3, "3rd": 3, "3rd floor": 3,
+    fourth: 4, "4th": 4, "4th floor": 4,
+    fifth: 5, "5th": 5, "5th floor": 5,
+  };
+  if (Object.hasOwn(namedFloors, raw.toLowerCase())) return namedFloors[raw.toLowerCase()];
   const parsed = optionalNumber(raw, "floor", rowIndex);
   if (!Number.isInteger(parsed)) throw new Error(`Floor must be a whole number on CSV row ${rowIndex + 2}`);
   return parsed;
@@ -171,6 +179,12 @@ function normalizedStatus(value, rowIndex) {
   };
   if (values[raw]) return values[raw];
   throw new Error(`Invalid status "${value}" on CSV row ${rowIndex + 2}. Use available, held, booked, or sold.`);
+}
+
+function floorLabel(floor) {
+  if (floor === 0) return "Ground";
+  const suffix = floor % 10 === 1 && floor % 100 !== 11 ? "st" : floor % 10 === 2 && floor % 100 !== 12 ? "nd" : floor % 10 === 3 && floor % 100 !== 13 ? "rd" : "th";
+  return `${floor}${suffix} floor`;
 }
 
 function ImportDialog({ projectId, projectName, onDone, supportsBuiltUpArea }) {
@@ -367,9 +381,9 @@ export default function Inventory() {
               </div>
               <div className="space-y-2">
                 {floorNums.map((f) => (
-                  <div key={f} className="flex items-center gap-3">
-                    <div className="w-14 shrink-0 text-[10px] uppercase tracking-[0.18em] font-bold text-forest/60">Fl {f}</div>
-                    <div className="flex flex-wrap gap-1.5">
+                  <div key={f} className="grid grid-cols-[76px_minmax(0,1fr)] items-start gap-3">
+                    <div className="pt-3 text-[10px] uppercase tracking-[0.12em] font-bold text-forest/60">{floorLabel(f)}</div>
+                    <div className="grid grid-cols-[repeat(auto-fill,minmax(156px,1fr))] gap-2">
                       {floors[f].map((u) => (
                         <UnitEditor key={u.id} unit={u} onSaved={load} canEdit={canEdit} supportsBuiltUpArea={supportsBuiltUpArea} />
                       ))}
