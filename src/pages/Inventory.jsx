@@ -221,7 +221,7 @@ function ImportDialog({ projectId, projectName, onDone, supportsBuiltUpArea }) {
         replace_existing: replace,
         rows: importableRows,
       };
-      const { data } = await api.post("/units/import", body);
+      const { data } = await api.post("/units/import", body, { timeout: 75000 });
       if (!data.created) { toast.error(data.errors?.[0]?.message || "No inventory units were created. Check the CSV columns and project, then retry."); return; }
       toast.success(`Imported ${data.created} of ${importableRows.length} units${data.failed ? `; ${data.failed} failed${data.errors?.[0]?.message ? ` (${data.errors[0].message})` : ""}` : ""}${replace ? " (replaced existing)" : ""}`);
       setOpen(false); setRows([]); setFileName("");
