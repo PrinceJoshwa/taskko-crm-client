@@ -372,7 +372,7 @@ export default function Inventory() {
 
       <div className="space-y-8">
         {Object.entries(byTower).map(([tower, floors]) => {
-          const floorNums = Object.keys(floors).map(Number).sort((a, b) => b - a);
+          const floorNums = Object.keys(floors).map(Number).sort((a, b) => a - b);
           return (
             <div key={tower} className="border border-[#E6E4DD] bg-white rounded-sm p-5">
               <div className="flex items-center justify-between mb-4">
