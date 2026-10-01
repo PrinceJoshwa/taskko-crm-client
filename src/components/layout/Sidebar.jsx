@@ -5,7 +5,7 @@ import { api, formatApiError } from "@/lib/api";
 import {
   LayoutDashboard, Users2, Building2, BedDouble, CalendarClock, BellRing,
   UserCog, Settings as SettingsIcon, LogOut, BarChart3, UploadCloud,
-  MessageSquareText, ShuffleIcon, Handshake, FileText, User, PhoneCall,
+  MessageSquareText, ShuffleIcon, Handshake, FileText, User, PhoneCall, CalendarCheck2,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { NAV, AUTH } from "@/constants/testIds";
@@ -54,7 +54,42 @@ export default function Sidebar() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordBusy, setPasswordBusy] = useState(false);
+  const [calendar, setCalendar] = useState(null);
+  const [calendarBusy, setCalendarBusy] = useState(false);
   const phoneMasked = !!user?.phone_masked;
+
+  const loadCalendarStatus = async () => {
+    try {
+      const { data } = await api.get("/integrations/google-calendar/status");
+      setCalendar(data);
+    } catch {
+      setCalendar({ configured: false, connected: false });
+    }
+  };
+
+  const connectCalendar = async () => {
+    setCalendarBusy(true);
+    try {
+      const { data } = await api.get("/integrations/google-calendar/connect");
+      window.location.assign(data.authorization_url);
+    } catch (e) {
+      toast.error(formatApiError(e.response?.data?.detail));
+      setCalendarBusy(false);
+    }
+  };
+
+  const disconnectCalendar = async () => {
+    setCalendarBusy(true);
+    try {
+      await api.delete("/integrations/google-calendar/connection");
+      setCalendar((current) => ({ ...current, connected: false, email: null }));
+      toast.success("Google Calendar disconnected");
+    } catch (e) {
+      toast.error(formatApiError(e.response?.data?.detail));
+    } finally {
+      setCalendarBusy(false);
+    }
+  };
 
   const saveProfile = async () => {
     try {
@@ -141,7 +176,7 @@ export default function Sidebar() {
       <div className="relative z-10 px-4 pb-6">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => { setPhone(phoneMasked ? "" : user?.phone || ""); setCurrentPassword(""); setNewPassword(""); setConfirmPassword(""); setProfileOpen(true); }}
+            onClick={() => { setPhone(phoneMasked ? "" : user?.phone || ""); setCurrentPassword(""); setNewPassword(""); setConfirmPassword(""); setProfileOpen(true); loadCalendarStatus(); }}
             className="h-9 w-9 rounded-sm bg-white/10 hover:bg-white/20 grid place-items-center text-sm font-display font-bold transition-colors duration-150"
             data-testid="sidebar-profile-btn"
             title="My profile"
@@ -189,6 +224,22 @@ export default function Sidebar() {
                 className="w-full h-10 border border-[#E6E4DD] rounded-sm px-3 text-sm focus:outline-none focus:border-forest"
               />
               <div className="text-[11px] text-forest/50 mt-1">The configured calling provider uses this number when bridging calls.</div>
+            </div>
+            <div className="border-t border-[#E6E4DD] pt-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="label-caps mb-1.5">Google Calendar</div>
+                  <div className="text-xs text-forest/60">
+                    {calendar?.connected ? "Connected. Your assigned site visits sync to your Google Calendar." : "Connect your account to sync your assigned site visits."}
+                  </div>
+                </div>
+                {calendar?.connected ? (
+                  <button type="button" disabled={calendarBusy} onClick={disconnectCalendar} className="h-9 px-3 rounded-sm border border-[#E6E4DD] text-forest text-sm font-medium hover:border-forest disabled:opacity-50">Disconnect</button>
+                ) : (
+                  <button type="button" disabled={calendarBusy || calendar?.configured === false} onClick={connectCalendar} className="h-9 px-3 rounded-sm bg-forest text-white text-sm font-medium hover:bg-forest-soft disabled:opacity-50 inline-flex items-center gap-2"><CalendarCheck2 className="h-4 w-4" />Connect Google Calendar</button>
+                )}
+              </div>
+              {calendar?.configured === false && <div className="text-[11px] text-[#B03A2E] mt-2">Google Calendar is not configured for this CRM yet.</div>}
             </div>
             <div className="border-t border-[#E6E4DD] pt-4 space-y-3">
               <div>
