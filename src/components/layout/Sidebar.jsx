@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, formatApiError } from "@/lib/api";
@@ -48,6 +48,7 @@ const GROUPS = [
 
 export default function Sidebar() {
   const { user, logout, setUser } = useAuth();
+  const location = useLocation();
   const [profileOpen, setProfileOpen] = useState(false);
   const [phone, setPhone] = useState(user?.phone || "");
   const [currentPassword, setCurrentPassword] = useState("");
@@ -67,6 +68,14 @@ export default function Sidebar() {
     }
   };
 
+  useEffect(() => {
+    const result = new URLSearchParams(location.search).get("google_calendar");
+    if (!result) return;
+    toast[result === "connected" ? "success" : "error"](result === "connected" ? "Google Calendar connected" : "Google Calendar connection was not completed");
+    window.history.replaceState({}, "", `${window.location.pathname}${window.location.hash}`);
+    loadCalendarStatus();
+  }, [location.search]);
+
   const connectCalendar = async () => {
     setCalendarBusy(true);
     try {
@@ -81,7 +90,7 @@ export default function Sidebar() {
   const disconnectCalendar = async () => {
     setCalendarBusy(true);
     try {
-      await api.delete("/integrations/google-calendar/connection");
+      await api.delete("/integrations/google-calendar");
       setCalendar((current) => ({ ...current, connected: false, email: null }));
       toast.success("Google Calendar disconnected");
     } catch (e) {
@@ -119,7 +128,7 @@ export default function Sidebar() {
     }
     setPasswordBusy(true);
     try {
-      await api.post("/users/me/password", { current_password: currentPassword, new_password: newPassword });
+      await api.post("/users/me/password", { current_password: currentPassword, new_password: newPassword, confirm_new_password: confirmPassword });
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
