@@ -9,6 +9,26 @@ import {
 import { Building2, Plus, MapPin, Home, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+function ProjectCover({ cover, name }) {
+  const [failed, setFailed] = useState(false);
+  const imageUrl = typeof cover === "string" ? cover.trim() : "";
+
+  useEffect(() => setFailed(false), [imageUrl]);
+
+  if (!imageUrl || failed) {
+    return <div className="w-full h-full grid place-items-center text-white/40"><Building2 className="h-10 w-10" /></div>;
+  }
+
+  return (
+    <img
+      src={imageUrl}
+      alt={name}
+      className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 export default function Projects() {
   const { user } = useAuth();
   const { refresh } = useProjects();
@@ -148,11 +168,7 @@ export default function Projects() {
             className="group bg-white border border-[#E6E4DD] rounded-sm overflow-hidden hover:shadow-sm transition-shadow duration-200"
           >
             <div className="aspect-[16/10] relative bg-forest overflow-hidden">
-              {p.cover ? (
-                <img src={p.cover} alt={p.name} className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500" />
-              ) : (
-                <div className="w-full h-full grid place-items-center text-white/40"><Building2 className="h-10 w-10" /></div>
-              )}
+              <ProjectCover cover={p.cover} name={p.name} />
               <div className="absolute top-3 left-3 bg-white/95 backdrop-blur text-[10px] uppercase tracking-[0.18em] font-bold text-forest px-2 py-1 rounded-sm">
                 {p.status || "active"}
               </div>
