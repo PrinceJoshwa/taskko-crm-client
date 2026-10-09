@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { api, asArray, formatApiError } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { displayOrganizationName } from "@/lib/organizationDisplay";
 import { TEAM } from "@/constants/testIds";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
@@ -116,7 +117,7 @@ export default function Team() {
           <h2 className="font-display font-black text-3xl text-forest tracking-tight mt-1">
             {users.length} member{users.length === 1 ? "" : "s"}
           </h2>
-          {activeOrganization && <div className="text-xs text-forest/60 mt-1">Organisation: {activeOrganization.name}</div>}
+          {activeOrganization && <div className="text-xs text-forest/60 mt-1">Organisation: {displayOrganizationName(activeOrganization.name)}</div>}
           <div className="text-sm text-forest/60 mt-1">Add each member's mobile in E.164 format (e.g. +919812345678) so the calling provider can bridge outbound calls.</div>
         </div>
         {canManage && (
@@ -167,7 +168,7 @@ export default function Team() {
                       <SelectTrigger className="h-10 rounded-sm border-[#E6E4DD]"><SelectValue placeholder="Select organisation" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="__none__">No organisation</SelectItem>
-                        {organizations.map((org) => <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>)}
+                        {organizations.map((org) => <SelectItem key={org.id} value={org.id}>{displayOrganizationName(org.name)}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
